@@ -35,14 +35,16 @@ const SavedJobsScreen = ({ savedJobs, removeJobFromSaved, navigation, appliedJob
                     style={[styles.removeButton, isDarkMode ? styles.darkButton : styles.lightButton]}
                     onPress={() => removeJobFromSaved(item.id)} // Use the centralized function to remove jobs
                   >
-                    <Text style={[styles.buttonText, isDarkMode ? styles.darkText : styles.lightText]}>Remove</Text>
+                    <Text style={[styles.buttonText]}>
+                      Remove
+                    </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.applyButton, isApplied && styles.disabledButton]} // Apply disabled style if already applied
                     onPress={() => !isApplied && handleApply(item.id, item.title)} // Disable onPress if already applied
                     disabled={isApplied} // Disable button if already applied
                   >
-                    <Text style={[styles.buttonText, isDarkMode ? styles.darkText : styles.lightText]}>
+                    <Text style={[styles.buttonText]}>
                       {isApplied ? 'Applied' : 'Apply'}
                     </Text>
                   </TouchableOpacity>
@@ -78,6 +80,7 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: 'bold',
     marginBottom: 16,
+    paddingTop: 16,
   },
   jobCard: {
     padding: 16,
@@ -132,7 +135,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  disabledButton: {
+    backgroundColor: '#ccc', // Gray out the button
+  },
   buttonText: {
+    color: '#fff',    // Always white text
     fontWeight: 'bold',
     fontSize: 16,
   },

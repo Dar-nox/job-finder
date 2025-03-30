@@ -171,6 +171,7 @@ const styles = StyleSheet.create({
   darkInput: {
     backgroundColor: '#1e1e1e',
     borderColor: '#444',
+    color: '#fff', // Set text color to white in dark mode
   },
   textArea: {
     height: 80,
