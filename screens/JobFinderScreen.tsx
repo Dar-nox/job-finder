@@ -1,62 +1,47 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, StatusBar } from 'react-native';
 import { v4 as uuidv4 } from 'uuid';
 import ApplicationFormModal from './ApplicationFormModal';
+import { useTheme } from '../context/ThemeContext'; // Import ThemeContext
+import { useFocusEffect } from '@react-navigation/native'; // Import useFocusEffect
 
 interface JobFinderScreenProps {
   onApply: () => void;
+  savedJobs: any[];
+  addJobToSaved: (job: any) => void;
+  appliedJobs: string[]; // Add appliedJobs prop
+  markJobAsApplied: (jobId: string) => void; // Add markJobAsApplied prop
+  jobs: any[];       // Receive jobs from App.tsx
+  loading: boolean;  // Receive loading from App.tsx
 }
 
-const JobFinderScreen: React.FC<JobFinderScreenProps> = ({ navigation, onApply }) => {
-  const [jobs, setJobs] = useState([]);
+const JobFinderScreen: React.FC<JobFinderScreenProps> = ({
+  navigation,
+  jobs,
+  loading,
+  savedJobs,
+  addJobToSaved,
+  appliedJobs,
+  markJobAsApplied
+}) => {
+  const { isDarkMode, toggleTheme } = useTheme(); // Use ThemeContext for dark mode
+
   const [searchQuery, setSearchQuery] = useState('');
-  const [savedJobs, setSavedJobs] = useState([]);
-  const [loading, setLoading] = useState(false);
   const [isModalVisible, setModalVisible] = useState(false);
-  const [selectedJobTitle, setSelectedJobTitle] = useState('');
-  const [isDarkMode, setIsDarkMode] = useState(false);
-
-  useEffect(() => {
-    const fetchJobs = async () => {
-      setLoading(true);
-      try {
-        const response = await fetch('https://empllo.com/api/v1');
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
-        if (Array.isArray(data)) {
-          const jobsWithIds = data.map((job) => ({ ...job, id: uuidv4() }));
-          setJobs(jobsWithIds);
-        } else if (data.jobs && Array.isArray(data.jobs)) {
-          const jobsWithIds = data.jobs.map((job) => ({ ...job, id: uuidv4() }));
-          setJobs(jobsWithIds);
-        } else {
-          Alert.alert('Error', 'Unexpected API response format.');
-        }
-      } catch (error) {
-        Alert.alert('Error', `Failed to fetch jobs: ${error.message}`);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchJobs();
-  }, []);
+  const [selectedJobId, setSelectedJobId] = useState(''); // Track selected job ID
+  const [selectedJobTitle, setSelectedJobTitle] = useState(''); // Track selected job title
 
   const saveJob = (job) => {
-    if (!savedJobs.find((savedJob) => savedJob.id === job.id)) {
-      setSavedJobs([...savedJobs, job]);
+    const isAlreadySaved = savedJobs.some((savedJob) => savedJob.id === job.id);
+    if (!isAlreadySaved) {
+      addJobToSaved(job); // Add job to saved jobs
     }
   };
 
-  const handleApply = (jobTitle: string) => {
+  const handleApply = (jobId: string, jobTitle: string) => {
     setModalVisible(true);
-    setSelectedJobTitle(jobTitle);
-  };
-
-  const toggleTheme = () => {
-    setIsDarkMode((prevMode) => !prevMode);
+    setSelectedJobId(jobId); // Pass jobId for marking as applied
+    setSelectedJobTitle(jobTitle); // Pass jobTitle for display in the modal
   };
 
   const filteredJobs = jobs.filter((job) =>
@@ -69,7 +54,7 @@ const JobFinderScreen: React.FC<JobFinderScreenProps> = ({ navigation, onApply }
         <Text style={[styles.header, isDarkMode ? styles.darkText : styles.lightText]}>Job Finder</Text>
         <TouchableOpacity
           style={styles.themeButton}
-          onPress={toggleTheme}
+          onPress={toggleTheme} // Use toggleTheme from ThemeContext
         >
           <Text style={styles.themeButtonText}>{isDarkMode ? "Light Mode" : "Dark Mode"}</Text>
         </TouchableOpacity>
@@ -81,42 +66,56 @@ const JobFinderScreen: React.FC<JobFinderScreenProps> = ({ navigation, onApply }
         value={searchQuery}
         onChangeText={setSearchQuery}
       />
+      <TouchableOpacity
+        style={styles.savedJobsButton}
+        onPress={() => navigation.navigate('SavedJobs')} // No need to pass savedJobs explicitly
+      >
+        <Text style={styles.savedJobsButtonText}>Go to Saved Jobs</Text>
+      </TouchableOpacity>
       {loading ? (
         <ActivityIndicator size="large" color={isDarkMode ? styles.darkActivityIndicator.color : styles.lightActivityIndicator.color} />
       ) : (
         <FlatList
           data={filteredJobs}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <View style={[styles.jobCard, isDarkMode ? styles.darkCard : styles.lightCard]}>
-              <Text style={[styles.jobTitle, isDarkMode ? styles.darkText : styles.lightText]}>{item.title}</Text>
-              <Text style={isDarkMode ? styles.darkText : styles.lightText}>{item.company}</Text>
-              <Text style={isDarkMode ? styles.darkText : styles.lightText}>{item.salary}</Text>
-              <View style={styles.buttonRow}>
-                <TouchableOpacity
-                  style={styles.saveButton}
-                  onPress={() => saveJob(item)}
-                >
-                  <Text style={styles.saveButtonText}>Save Job</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.applyButton}
-                  onPress={() => handleApply(item.title)}
-                >
-                  <Text style={styles.applyButtonText}>Apply</Text>
-                </TouchableOpacity>
+          renderItem={({ item }) => {
+            const isApplied = appliedJobs.includes(item.id); // Check if the job is already applied
+            const isSaved = savedJobs.some((savedJob) => savedJob.id === item.id); // Check if the job is already saved
+            return (
+              <View style={[styles.jobCard, isDarkMode ? styles.darkCard : styles.lightCard]}>
+                <Text style={[styles.jobTitle, isDarkMode ? styles.darkText : styles.lightText]}>{item.title}</Text>
+                <Text style={isDarkMode ? styles.darkText : styles.lightText}>{item.company}</Text>
+                <Text style={isDarkMode ? styles.darkText : styles.lightText}>{item.salary}</Text>
+                <View style={styles.buttonRow}>
+                  <TouchableOpacity
+                    style={[styles.saveButton, isSaved && styles.disabledButton]} // Apply disabled style if already saved
+                    onPress={() => !isSaved && saveJob(item)} // Disable onPress if already saved
+                    disabled={isSaved} // Disable button if already saved
+                  >
+                    <Text style={styles.saveButtonText}>{isSaved ? 'Saved' : 'Save Job'}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.applyButton, isApplied && styles.disabledButton]} // Apply disabled style if already applied
+                    onPress={() => !isApplied && handleApply(item.id, item.title)} // Pass jobId and jobTitle
+                    disabled={isApplied} // Disable button if already applied
+                  >
+                    <Text style={styles.applyButtonText}>{isApplied ? 'Applied' : 'Apply'}</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-            </View>
-          )}
+            );
+          }}
         />
       )}
       <ApplicationFormModal
         visible={isModalVisible}
         onClose={() => setModalVisible(false)}
-        jobTitle={selectedJobTitle}
+        jobId={selectedJobId} // Pass jobId for marking as applied
+        jobTitle={selectedJobTitle} // Pass jobTitle for display
         fromSavedJobs={false}
         navigation={navigation}
         isDarkMode={isDarkMode}
+        markJobAsApplied={markJobAsApplied} // Pass function to mark jobs as applied
       />
     </View>
   );
@@ -243,6 +242,23 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 4,
+  },
+  savedJobsButton: {
+    backgroundColor: '#4B6387',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  savedJobsButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  disabledButton: {
+    backgroundColor: '#ccc', // Gray out the button
   },
 });
 

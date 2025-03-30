@@ -6,11 +6,13 @@ interface ApplicationFormModalProps {
   onClose: () => void;
   fromSavedJobs?: boolean; // Indicates if the modal is opened from SavedJobsScreen
   navigation?: any; // Navigation prop for redirection
-  jobTitle: string; // Job title passed as a prop
+  jobId: string; // Job ID for marking as applied
+  jobTitle: string; // Job title for display
   isDarkMode: boolean; // Add isDarkMode prop
+  markJobAsApplied: (jobId: string) => void; // Function to mark job as applied
 }
 
-const ApplicationFormModal: React.FC<ApplicationFormModalProps> = ({ visible, onClose, fromSavedJobs, navigation, jobTitle, isDarkMode }) => {
+const ApplicationFormModal: React.FC<ApplicationFormModalProps> = ({ visible, onClose, fromSavedJobs, navigation, jobId, jobTitle, isDarkMode, markJobAsApplied }) => {
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -48,6 +50,7 @@ const ApplicationFormModal: React.FC<ApplicationFormModalProps> = ({ visible, on
         {
           text: 'Okay',
           onPress: () => {
+            markJobAsApplied(jobId); // Use jobId for marking as applied
             if (fromSavedJobs && navigation) {
               navigation.navigate('JobFinder'); // Redirect to JobFinderScreen
             }
@@ -76,7 +79,7 @@ const ApplicationFormModal: React.FC<ApplicationFormModalProps> = ({ visible, on
           <Text style={[styles.title, isDarkMode ? styles.darkText : styles.lightText]}>Application Form</Text>
           <Text style={[styles.jobTitleText, isDarkMode ? styles.darkText : styles.lightText]}>
             <Text style={styles.label}>Job Title: </Text>
-            {jobTitle}
+            {jobTitle} {/* Display the job title */}
           </Text>
           <TextInput
             style={[styles.input, isDarkMode ? styles.darkInput : styles.lightInput]}
